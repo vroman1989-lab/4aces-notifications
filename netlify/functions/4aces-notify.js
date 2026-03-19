@@ -2,14 +2,11 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const FROM_EMAIL = 'vroman@romantechsolutions.net';
 const FROM_NAME = 'Roman Tech Solutions';
 
-// 4 Aces recipients
 const RECIPIENTS = [
-  '4AcesAutogroup@Comcast.net',
-  'JHodge662@gmail.com'
+  '4acesauto6626@gmail.com'
 ];
 
 exports.handler = async (event) => {
-  // Only accept POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
@@ -21,11 +18,9 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  // Vapi wraps everything in payload.message
   const message = payload.message || payload;
   const eventType = message.type || payload.type;
 
-  // Only process end-of-call reports
   if (eventType !== 'end-of-call-report') {
     return { statusCode: 200, body: JSON.stringify({ received: true, skipped: true }) };
   }
@@ -43,24 +38,18 @@ exports.handler = async (event) => {
     ? `${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s`
     : `${durationSeconds}s`;
 
-  // Extract user lines first — used for both language detection and "what caller said"
   const userLines = transcript
     .split('\n')
     .filter(line => line.toLowerCase().startsWith('user:') || line.toLowerCase().startsWith('customer:'))
     .map(line => line.replace(/^(user|customer):\s*/i, '').trim())
     .filter(line => line.length > 2);
 
-  // FIX: Scan user speech only — previous code scanned full payload which
-  // matched "auto" in "4 Aces Auto" assistant name, flagging every call as Spanish
   const userText = userLines.join(' ').toLowerCase();
   const spanishIndicators = ['hola', 'gracias', 'carro', 'precio', 'quiero', 'habla', 'español', 'tiene', 'cuánto', 'necesito', 'puedo'];
   const isSpanish = spanishIndicators.some(word => userText.includes(word));
   const languageTag = isSpanish ? '🇪🇸 Spanish Call' : '🇺🇸 English Call';
 
-  // Build "what the caller said" section
   const callerSaid = userLines.slice(0, 5).join('\n• ');
-
-  // Build email
   const subject = `📞 New 4 Aces Call — ${callerNumber} (${durationFormatted})`;
 
   const htmlBody = `
@@ -82,8 +71,6 @@ exports.handler = async (event) => {
     .section h3 { font-size: 13px; text-transform: uppercase; color: #666; letter-spacing: 0.5px; margin: 0 0 8px; }
     .section p { background: #f8f9fa; padding: 12px; border-radius: 4px; margin: 0; font-size: 14px; line-height: 1.6; color: #333; }
     .transcript-box { background: #f8f9fa; padding: 12px; border-radius: 4px; font-size: 13px; line-height: 1.7; color: #444; max-height: 300px; overflow-y: auto; white-space: pre-wrap; }
-    .badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; background: #e8f4e8; color: #2d7a2d; }
-    .badge.spanish { background: #fff3e0; color: #e65100; }
     .footer { background: #f8f9fa; padding: 16px 24px; font-size: 12px; color: #999; text-align: center; border-top: 1px solid #eee; }
   </style>
 </head>
@@ -94,7 +81,6 @@ exports.handler = async (event) => {
       <p>Powered by Roman Tech Solutions AI</p>
     </div>
     <div class="body">
-
       <div class="info-grid">
         <div class="info-box">
           <div class="label">Caller</div>
@@ -143,7 +129,6 @@ exports.handler = async (event) => {
 </body>
 </html>`;
 
-  // Send via SendGrid
   try {
     const toArray = RECIPIENTS.map(email => ({ email }));
 

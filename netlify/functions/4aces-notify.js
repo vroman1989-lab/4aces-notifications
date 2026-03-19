@@ -1,5 +1,5 @@
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
-const FROM_EMAIL = 'notifications@romantechsolutions.net';
+const FROM_EMAIL = 'vroman@romantechsolutions.net';
 const FROM_NAME = 'Roman Tech Solutions';
 
 // 4 Aces recipients

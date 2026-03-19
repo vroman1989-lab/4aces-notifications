@@ -43,19 +43,22 @@ exports.handler = async (event) => {
     ? `${Math.floor(durationSeconds / 60)}m ${durationSeconds % 60}s`
     : `${durationSeconds}s`;
 
-  // Detect language from transcript
-  const spanishIndicators = ['hola', 'gracias', 'carro', 'auto', 'precio', 'quiero', 'habla', 'español', 'tiene', 'cuánto'];
-  const isSpanish = spanishIndicators.some(word => transcript.toLowerCase().includes(word));
-  const languageTag = isSpanish ? '🇪🇸 Spanish Call' : '🇺🇸 English Call';
-
-  // Extract caller intent from transcript - look for User lines only
+  // Extract user lines first — used for both language detection and "what caller said"
   const userLines = transcript
     .split('\n')
     .filter(line => line.toLowerCase().startsWith('user:') || line.toLowerCase().startsWith('customer:'))
     .map(line => line.replace(/^(user|customer):\s*/i, '').trim())
-    .filter(line => line.length > 2)
-    .slice(0, 5)
-    .join('\n• ');
+    .filter(line => line.length > 2);
+
+  // FIX: Scan user speech only — previous code scanned full payload which
+  // matched "auto" in "4 Aces Auto" assistant name, flagging every call as Spanish
+  const userText = userLines.join(' ').toLowerCase();
+  const spanishIndicators = ['hola', 'gracias', 'carro', 'precio', 'quiero', 'habla', 'español', 'tiene', 'cuánto', 'necesito', 'puedo'];
+  const isSpanish = spanishIndicators.some(word => userText.includes(word));
+  const languageTag = isSpanish ? '🇪🇸 Spanish Call' : '🇺🇸 English Call';
+
+  // Build "what the caller said" section
+  const callerSaid = userLines.slice(0, 5).join('\n• ');
 
   // Build email
   const subject = `📞 New 4 Aces Call — ${callerNumber} (${durationFormatted})`;
@@ -118,10 +121,10 @@ exports.handler = async (event) => {
       </div>
       ` : ''}
 
-      ${userLines ? `
+      ${callerSaid ? `
       <div class="section">
         <h3>💬 What the Caller Said</h3>
-        <p>• ${userLines}</p>
+        <p>• ${callerSaid}</p>
       </div>
       ` : ''}
 
